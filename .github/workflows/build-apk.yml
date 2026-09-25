@@ -1,1 +1,48 @@
+name: Build APK
 
+"on":
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Baixar projeto
+        uses: actions/checkout@v4
+
+      - name: Extrair projeto
+        run: |
+          unzip -q GameVisualEnhancer_MVP.zip -d projeto
+          echo "Conteúdo extraído:"
+          find projeto -maxdepth 3 -type f | head -100
+
+      - name: Encontrar Gradle Wrapper
+        run: |
+          GRADLEW=$(find projeto -name gradlew -type f | head -1)
+          if [ -z "$GRADLEW" ]; then
+            echo "ERRO: gradlew não encontrado."
+            echo "Arquivos encontrados:"
+            find projeto -maxdepth 5 -type f
+            exit 1
+          fi
+          echo "Gradle encontrado em: $GRADLEW"
+          chmod +x "$GRADLEW"
+
+      - name: Configurar Java
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Compilar APK
+        run: |
+          GRADLEW=$(find projeto -name gradlew -type f | head -1)
+          cd "$(dirname "$GRADLEW")"
+          ./gradlew assembleDebug
+
+      - name: Disponibilizar APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: '**/build/outputs/apk/**/*.apk'
